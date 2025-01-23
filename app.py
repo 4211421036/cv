@@ -1,6 +1,5 @@
 import asyncio
 import websockets
-import ssl
 import cv2
 import base64
 import numpy as np
@@ -30,11 +29,8 @@ async def websocket_handler(websocket, path):
         print(f"WebSocket error: {e}")
 
 async def main():
-    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    ssl_context.load_cert_chain(certfile='cert.pem', keyfile='key.pem')
-
-    server = await websockets.serve(websocket_handler, "0.0.0.0", 8089, ssl=ssl_context)
-    server_address = f"wss://0.0.0.0:8089"
+    server = await websockets.serve(websocket_handler, "0.0.0.0", 8089)
+    server_address = f"ws://0.0.0.0:8089"
     print(f"WebSocket server started at {server_address}")
     await server.wait_closed()
 
