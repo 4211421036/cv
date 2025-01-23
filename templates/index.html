@@ -1,40 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python in HTML with Pyodide</title>
+    <script src="https://cdn.jsdelivr.net/npm/pyodide@0.22.1/pyodide.js"></script>
+</head>
 <body>
-  <video id="videoElement" autoplay></video>
-  <script>
-    let ws;
-    let videoElement = document.getElementById('videoElement');
+    <h1>Real-Time Face Landmark Detection with Pyodide</h1>
 
-    function connectWebSocket() {
-      ws = new WebSocket('ws://0.0.0.0:8089'); // Menggunakan WS
+    <video id="video" width="640" height="480" autoplay></video>
+    <button id="start-button">Start Webcam</button>
 
-      ws.onopen = () => {
-        console.log('WebSocket connected');
-      };
+    <script>
+        async function loadPyodideAndRun() {
+            // Load Pyodide and initialize it
+            const pyodide = await loadPyodide();
+            console.log("Pyodide loaded");
 
-      ws.onmessage = (event) => {
-        // Process received frame
-        console.log('Processed frame received');
-      };
-    }
+            // Load Python code into Pyodide environment
+            await pyodide.runPythonAsync(`
+import sys
+import mediapipe as mp
+import cv2
+import numpy as np
 
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then((stream) => {
-        videoElement.srcObject = stream;
-        connectWebSocket();
+mp_face_mesh = mp.solutions.face_mesh
+mp_drawing = mp.solutions.drawing_utils
+face_mesh = mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
-        setInterval(() => {
-          if (ws && ws.readyState === WebSocket.OPEN) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 640;
-            canvas.height = 480;
-            canvas.getContext('2d').drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-            const frame = canvas.toDataURL('image/jpeg');
-            ws.send(frame);
-          }
-        }, 100);
-      });
-  </script>
+def process_frame(frame):
+    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    results = face_mesh.process(frame_rgb)
+    
+    if results.multi_face_landmarks:
+        for face_landmarks in results.multi_face_landmarks:
+            mp_drawing.draw_landmarks(frame, face_landmarks, mp_face_mesh.FACEMESH_TESSELATION)
+    return frame
+            `);
+        }
+
+        // Start the webcam when the button is clicked
+        document.getElementById("start-button").onclick = async function() {
+            const video = document.getElementById("video");
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            const mediaRecorder = new MediaRecorder(stream);
+            const chunks = [];
+            mediaRecorder.ondataavailable = function(event) {
+                chunks.push(event.data);
+            };
+            mediaRecorder.onstop = function() {
+                const blob = new Blob(chunks, { type: "video/webm" });
+                const videoUrl = URL.createObjectURL(blob);
+                video.src = videoUrl;
+            };
+            mediaRecorder.start();
+        };
+    </script>
 </body>
 </html>
