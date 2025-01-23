@@ -56,5 +56,5 @@ jobs:
     
     - name: Connect to WebSocket server with wscat
       run: |
-        npx wscat -c ws://localhost:8089 || echo "WebSocket connection failed"
+        npx wscat -c ws://20.25.192.81:8089 || echo "WebSocket connection failed"
         sleep 60m
