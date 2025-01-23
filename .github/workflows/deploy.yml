@@ -1,51 +1,60 @@
 name: Deploy to GitHub Pages
-
 on:
   push:
     branches:
       - main
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
-
+    
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: '3.x'
-
+    
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install websockets opencv-python mediapipe aiohttp numpy
         npm install -g wscat
-
-    - name: Build static files
+    
+    - name: Prepare deployment directory
       run: |
         mkdir -p public
-        nohup python -m http.server 8080 &
-        echo "HTTP server started at http://localhost:8080"
         cp templates/index.html public/
-
+        cp app.py public/
+        cp requirements.txt public/
+    
+    - name: Get Public IP
+      id: get_ip
+      run: |
+        PUBLIC_IP=$(curl -s ifconfig.me)
+        echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
+    
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./public
-
-    - name: Run WebSocket server
+    
+    - name: Print Server Details
       run: |
-          export USE_MOCK_CAMERA=true
-          # Run the WebSocket server on port 8089
-          nohup python app.py & 
-          echo "WebSocket server started at ws://localhost:8089"
-      
+        echo "WebSocket Server Public IP: ${{ steps.get_ip.outputs.public_ip }}"
+        echo "Proposed WebSocket Address: ws://${{ steps.get_ip.outputs.public_ip }}:8089"
+    
+    - name: Start WebSocket Server in Background
+      run: |
+        python app.py &
+        sleep 10  # Wait for server to start
+    
+    - name: Verify WebSocket Server
+      run: |
+        nc -zv ${{ steps.get_ip.outputs.public_ip }} 8089 || echo "Port 8089 not accessible"
+    
     - name: Connect to WebSocket server with wscat
       run: |
-          # Test WebSocket connection
-          npx wscat -c ws://localhost:8089 || echo "WebSocket connection failed"
-          sleep 60m
+        npx wscat -c ws://localhost:8089 || echo "WebSocket connection failed"
+        sleep 60m
