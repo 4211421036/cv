@@ -19,7 +19,19 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install websockets opencv-python mediapipe aiohttp numpy
-        npm install -g wscat
+        npm install -g wscat jq
+    
+    - name: Get Public IP
+      id: get_ip
+      run: |
+        PUBLIC_IP=$(curl -s ifconfig.me)
+        echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
+        echo "WebSocket URL: ws://$PUBLIC_IP:8089"
+    
+    - name: Update HTML WebSocket URL
+      run: |
+        WS_URL="ws://${{ steps.get_ip.outputs.public_ip }}:8089"
+        sed -i "s|ws://your-websocket-server-url|$WS_URL|g" templates/index.html
     
     - name: Prepare deployment directory
       run: |
@@ -28,22 +40,11 @@ jobs:
         cp app.py public/
         cp requirements.txt public/
     
-    - name: Get Public IP
-      id: get_ip
-      run: |
-        PUBLIC_IP=$(curl -s ifconfig.me)
-        echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
-    
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./public
-    
-    - name: Print Server Details
-      run: |
-        echo "WebSocket Server Public IP: ${{ steps.get_ip.outputs.public_ip }}"
-        echo "Proposed WebSocket Address: ws://${{ steps.get_ip.outputs.public_ip }}:8089"
     
     - name: Start WebSocket Server in Background
       run: |
@@ -52,9 +53,21 @@ jobs:
     
     - name: Verify WebSocket Server
       run: |
-        nc -zv ${{ steps.get_ip.outputs.public_ip }} 8089 || echo "Port 8089 not accessible"
-    
-    - name: Connect to WebSocket server with wscat
-      run: |
-        npx wscat -c ws://20.25.192.81:8089 || echo "WebSocket connection failed"
-        sleep 60m
+        IP=${{ steps.get_ip.outputs.public_ip }}
+        if nc -zv $IP 8089; then
+          echo "WebSocket server is accessible on port 8089"
+          
+          # Attempt WebSocket connection
+          wscat -c ws://$IP:8089 -n | tee wscat_output.txt
+          
+          # Check if connection was successful
+          if grep -q "Connected" wscat_output.txt; then
+            echo "WebSocket connection successful"
+            exit 0
+          else
+            echo "WebSocket connection failed"
+            exit 1
+          fi
+        else
+          echo "Port 8089 is not accessible"
+          exit 1
