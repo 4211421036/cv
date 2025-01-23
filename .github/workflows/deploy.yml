@@ -26,12 +26,17 @@ jobs:
       run: |
         PUBLIC_IP=$(curl -s ifconfig.me)
         echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
-        echo "WebSocket URL: ws://$PUBLIC_IP:8089"
+        echo "WebSocket URL: wss://$PUBLIC_IP:8089"
     
     - name: Update WebSocket URL in index.html
       run: |
         PUBLIC_IP=$(curl -s ifconfig.me)
-        sed -i 's|ws://.*:8089|ws://'$PUBLIC_IP':8089|' templates/index.html
+        sed -i 's|ws://.*:8089|wss://'$PUBLIC_IP':8089|' templates/index.html
+    
+    - name: Create certificate files
+      run: |
+        echo "${{ secrets.CERT_PEM }}" > cert.pem
+        echo "${{ secrets.KEY_PEM }}" > key.pem
     
     - name: Prepare deployment directory
       run: |
@@ -56,7 +61,7 @@ jobs:
         PUBLIC_IP=$(curl -s ifconfig.me)
         if nc -zv $PUBLIC_IP 8089; then
           echo "WebSocket server is accessible on port 8089"
-          npx wscat -c ws://$PUBLIC_IP:8089 || echo "WebSocket connection failed"
+          npx wscat -c wss://$PUBLIC_IP:8089 || echo "WebSocket connection failed"
         else
           echo "Port 8089 is not accessible"
           exit 1
