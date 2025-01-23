@@ -1,67 +1,30 @@
-name: Deploy to GitHub Pages
-on:
-  push:
-    branches:
-      - main
+name: WebSocket Server
+
+on: [push]
+
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
+
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v2
-    
+
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: '3.x'
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install websockets opencv-python mediapipe aiohttp numpy
-        npm install -g wscat
-    
-    - name: Get Public IP
-      id: get_ip
-      run: |
-        PUBLIC_IP=$(curl -s ifconfig.me)
-        echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
-        echo "WebSocket URL: wss://$PUBLIC_IP:8089"
-    
-    - name: Update WebSocket URL in index.html
-      run: |
-        PUBLIC_IP=$(curl -s ifconfig.me)
-        sed -i 's|ws://.*:8089|wss://'$PUBLIC_IP':8089|' templates/index.html
-    
+        pip install websockets opencv-python-headless numpy
+
     - name: Create certificate files
       run: |
         echo "${{ secrets.CERT_PEM }}" > cert.pem
         echo "${{ secrets.KEY_PEM }}" > key.pem
-    
-    - name: Prepare deployment directory
+
+    - name: Run WebSocket server
       run: |
-        mkdir -p public
-        cp templates/index.html public/
-        cp app.py public/
-        cp requirements.txt public/
-    
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./public
-    
-    - name: Start WebSocket Server in Background
-      run: |
-        python app.py & 
-        sleep 10  # Wait for server to start
-    
-    - name: Verify WebSocket Server
-      run: |
-        PUBLIC_IP=$(curl -s ifconfig.me)
-        if nc -zv $PUBLIC_IP 8089; then
-          echo "WebSocket server is accessible on port 8089"
-          npx wscat -c wss://$PUBLIC_IP:8089 || echo "WebSocket connection failed"
-        else
-          echo "Port 8089 is not accessible"
-          exit 1
+        python server.py
