@@ -54,7 +54,7 @@ jobs:
     - name: Verify WebSocket Server
       run: |
         PUBLIC_IP=$(curl -s ifconfig.me)
-        if nc -zv $IP 8089; then
+        if nc -zv $PUBLIC_IP 8089; then
           echo "WebSocket server is accessible on port 8089"
           npx wscat -c ws://$PUBLIC_IP:8089 || echo "WebSocket connection failed"
         else
