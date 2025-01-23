@@ -20,11 +20,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install websockets opencv-python mediapipe aiohttp numpy
 
-    - name: Create certificate files
-      run: |
-        echo "${{ secrets.CERT_PEM }}" > cert.pem
-        echo "${{ secrets.KEY_PEM }}" > key.pem
-
     - name: Run WebSocket server
       run: |
         python app.py
