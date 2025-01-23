@@ -3,60 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Python in HTML with Pyodide</title>
-    <script src="https://cdn.jsdelivr.net/npm/pyodide@0.22.1/pyodide.js"></script>
+    <title>MediaPipe Face Mesh Detection</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <style>
+        video {
+            position: absolute;
+            width: 640px;
+            height: 480px;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 640px;
+            height: 480px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Real-Time Face Landmark Detection with Pyodide</h1>
-
+    <h1>Real-Time Face Landmark Detection</h1>
     <video id="video" width="640" height="480" autoplay></video>
-    <button id="start-button">Start Webcam</button>
+    <canvas id="canvas"></canvas>
 
     <script>
-        async function loadPyodideAndRun() {
-            // Load Pyodide and initialize it
-            const pyodide = await loadPyodide();
-            console.log("Pyodide loaded");
+        // Setup the video and canvas elements
+        const video = document.getElementById("video");
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
 
-            // Load Python code into Pyodide environment
-            await pyodide.runPythonAsync(`
-import sys
-import mediapipe as mp
-import cv2
-import numpy as np
+        // Initialize MediaPipe FaceMesh
+        const faceMesh = new FaceMesh.FaceMesh({
+            locateLandmarks: true
+        });
 
-mp_face_mesh = mp.solutions.face_mesh
-mp_drawing = mp.solutions.drawing_utils
-face_mesh = mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+        faceMesh.setOptions({
+            maxNumFaces: 1,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
 
-def process_frame(frame):
-    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    results = face_mesh.process(frame_rgb)
-    
-    if results.multi_face_landmarks:
-        for face_landmarks in results.multi_face_landmarks:
-            mp_drawing.draw_landmarks(frame, face_landmarks, mp_face_mesh.FACEMESH_TESSELATION)
-    return frame
-            `);
+        // Get the webcam stream
+        async function setupWebcam() {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: true
+            });
+            video.srcObject = stream;
+            video.onloadedmetadata = () => {
+                video.play();
+                detectLandmarks();
+            };
         }
 
-        // Start the webcam when the button is clicked
-        document.getElementById("start-button").onclick = async function() {
-            const video = document.getElementById("video");
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            video.srcObject = stream;
-            const mediaRecorder = new MediaRecorder(stream);
-            const chunks = [];
-            mediaRecorder.ondataavailable = function(event) {
-                chunks.push(event.data);
-            };
-            mediaRecorder.onstop = function() {
-                const blob = new Blob(chunks, { type: "video/webm" });
-                const videoUrl = URL.createObjectURL(blob);
-                video.src = videoUrl;
-            };
-            mediaRecorder.start();
-        };
+        // Detect landmarks and draw them
+        async function detectLandmarks() {
+            const predictions = await faceMesh.send({image: video});
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);  // Clear the canvas
+            
+            if (predictions.multiFaceLandmarks) {
+                predictions.multiFaceLandmarks.forEach(landmarks => {
+                    // Draw landmarks on the canvas
+                    ctx.fillStyle = "red";
+                    landmarks.forEach(landmark => {
+                        const x = landmark.x * canvas.width;
+                        const y = landmark.y * canvas.height;
+                        ctx.beginPath();
+                        ctx.arc(x, y, 1, 0, 2 * Math.PI);
+                        ctx.fill();
+                    });
+                });
+            }
+
+            // Call again for the next frame
+            requestAnimationFrame(detectLandmarks);
+        }
+
+        // Start the webcam
+        setupWebcam();
     </script>
 </body>
 </html>
