@@ -1,0 +1,8 @@
+
+asyncio
+opencv-python
+asyncio
+websockets
+httpserver
+numpy
+aiohttp
