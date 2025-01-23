@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MediaPipe Face Mesh Detection</title>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
     <style>
         video {
             position: absolute;
@@ -37,6 +37,7 @@
             locateLandmarks: true
         });
 
+        // Set options for FaceMesh
         faceMesh.setOptions({
             maxNumFaces: 1,
             minDetectionConfidence: 0.5,
