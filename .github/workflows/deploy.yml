@@ -18,7 +18,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install websockets opencv-python-headless numpy
+        pip install websockets opencv-python mediapipe aiohttp numpy ssl
 
     - name: Create certificate files
       run: |
@@ -27,4 +27,4 @@ jobs:
 
     - name: Run WebSocket server
       run: |
-        python server.py
+        python app.py
