@@ -7,7 +7,7 @@
     let videoElement = document.getElementById('videoElement');
 
     function connectWebSocket() {
-      ws = new WebSocket('wss://0.0.0.0:8089'); // Menggunakan WSS
+      ws = new WebSocket('ws://0.0.0.0:8089'); // Menggunakan WS
 
       ws.onopen = () => {
         console.log('WebSocket connected');
