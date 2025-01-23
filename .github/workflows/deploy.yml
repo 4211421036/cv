@@ -28,6 +28,11 @@ jobs:
         echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
         echo "WebSocket URL: ws://$PUBLIC_IP:8089"
     
+    - name: Update WebSocket URL in index.html
+      run: |
+        PUBLIC_IP=$(curl -s ifconfig.me)
+        sed -i 's|ws://.*:8089|ws://'$PUBLIC_IP':8089|' templates/index.html
+    
     - name: Prepare deployment directory
       run: |
         mkdir -p public
@@ -43,7 +48,7 @@ jobs:
     
     - name: Start WebSocket Server in Background
       run: |
-        python app.py &
+        python app.py & 
         sleep 10  # Wait for server to start
     
     - name: Verify WebSocket Server
