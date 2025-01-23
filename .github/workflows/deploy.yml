@@ -29,18 +29,16 @@ jobs:
         echo "WebSocket URL: ws://$PUBLIC_IP:8089"
     
     - name: Update HTML WebSocket URL
+      env:
+        WS_URL: "ws://${{ steps.get_ip.outputs.public_ip }}:8089"
       run: |
-        WS_URL="ws://${{ steps.get_ip.outputs.public_ip }}:8089"
-        python3 - << EOF
-        import re
-        
+        python3 <<EOF
         with open('templates/index.html', 'r') as file:
             content = file.read()
         
-        updated_content = re.sub(
-            r"ws://your-websocket-server-url", 
-            "$WS_URL", 
-            content
+        updated_content = content.replace(
+            "ws://your-websocket-server-url", 
+            "$WS_URL"
         )
         
         with open('templates/index.html', 'w') as file:
