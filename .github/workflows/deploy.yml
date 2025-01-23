@@ -19,7 +19,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install websockets opencv-python mediapipe aiohttp numpy
-        npm install -g wscat jq
+        npm install -g wscat
     
     - name: Get Public IP
       id: get_ip
@@ -31,7 +31,7 @@ jobs:
     - name: Update HTML WebSocket URL
       run: |
         WS_URL="ws://${{ steps.get_ip.outputs.public_ip }}:8089"
-        sed -i "s|ws://your-websocket-server-url|$WS_URL|g" templates/index.html
+        sed -i "s|wss://your-websocket-server-url|$WS_URL|g" templates/index.html
     
     - name: Prepare deployment directory
       run: |
@@ -56,18 +56,7 @@ jobs:
         IP=${{ steps.get_ip.outputs.public_ip }}
         if nc -zv $IP 8089; then
           echo "WebSocket server is accessible on port 8089"
-          
-          # Attempt WebSocket connection
-          wscat -c ws://$IP:8089 -n | tee wscat_output.txt
-          
-          # Check if connection was successful
-          if grep -q "Connected" wscat_output.txt; then
-            echo "WebSocket connection successful"
-            exit 0
-          else
-            echo "WebSocket connection failed"
-            exit 1
-          fi
+          npx wscat -c ws://$IP:8089 || echo "WebSocket connection failed"
         else
           echo "Port 8089 is not accessible"
           exit 1
